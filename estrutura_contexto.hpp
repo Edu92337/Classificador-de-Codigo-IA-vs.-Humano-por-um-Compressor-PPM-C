@@ -17,20 +17,35 @@ const uint32_t ESCAPE = 256;
 // a ideia seria percorrer até a folha e codificar na subida, para dar prioridade ao maior contexto
 // Kmax <= 10 => O(Kmax)<= O(10)
 struct No{
-    // implementação original uint8_t filhos[257]
-    unordered_map<uint8_t, No*> filhos;
-    // armazena as frequencias de cada byte no contexto
-    array<uint32_t,257>frequencias{};
-    No* pai; 
-    uint32_t total; //soma de todas as frequências
+    vector<pair<uint8_t,No*>> filhos;
+    vector<pair<uint16_t,uint32_t>> frequencias; // (simbolo, frequencia) — só entradas que existem
+    No* pai;
+    uint32_t total;
     uint16_t distintos = 0;
+
     No(){
-        frequencias.fill(0);
         pai = nullptr;
         total = 0;
-
     }
-    
+
+    uint32_t get_freq(uint16_t simbolo) const{
+        for(const auto& [s,f] : frequencias)
+            if(s == simbolo) return f;
+        return 0;
+    }
+
+    uint32_t& freq_ref(uint16_t simbolo){
+        for(auto& [s,f] : frequencias)
+            if(s == simbolo) return f;
+        frequencias.push_back({simbolo, 0});
+        return frequencias.back().second;
+    }
+
+    No* busca_filho(uint8_t b) const{
+        for(const auto& [byte,no] : filhos)
+            if(byte == b) return no;
+        return nullptr;
+    }
 };
 
 // Estrutura relacional que conecta contextos semelhantes
@@ -61,12 +76,14 @@ struct trie_contexto{
         No* atual = raiz;
         for(auto it = bytes.rbegin(); it != bytes.rend(); it++){
             uint8_t b = *it;
-            if(atual->filhos.find(b) == atual->filhos.end()){
-                atual->filhos[b] = new No;
-                atual->filhos[b]->pai = atual;
+            No* filho = atual->busca_filho(b);
+            if(!filho){
+                filho = new No();
+                filho->pai = atual;
+                atual->filhos.push_back({b, filho});
                 num_nos++;
             }
-            atual = atual->filhos[b];
+            atual = filho;
         }
         return true;
     }
@@ -76,7 +93,8 @@ struct trie_contexto{
         No* atual = raiz;
         for(auto it = contexto.rbegin();it!=contexto.rend();it++){
             uint8_t b = *it;
-            if(atual->filhos.find(b) != atual->filhos.end())atual = atual->filhos[b];
+            No* filho = atual->busca_filho(b);
+            if(filho) atual = filho;
             else return atual;
         }
         return atual;
@@ -86,17 +104,13 @@ struct trie_contexto{
     // faz a propagação para todos os contextos menores até a raiz
     void atualiza_frequencia(No* contexto, uint8_t simbolo) {
         while (contexto != nullptr) {
-            if (contexto->frequencias[simbolo] == 0) contexto->distintos++;
-            if (contexto->frequencias[simbolo] == 0) contexto->distintos++;
-
-            contexto->frequencias[simbolo]++;
+            uint32_t& f = contexto->freq_ref(simbolo);
+            if(f == 0) contexto->distintos++;
+            f++;
             contexto->total++;
-            
             contexto = contexto->pai;
         }
-    }
-
-    
+    } 
 
 
 };

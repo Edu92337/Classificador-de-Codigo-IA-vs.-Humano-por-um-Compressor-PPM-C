@@ -43,12 +43,12 @@ struct Ppm{
     }
 
     void inicia_equiprovaveis(){
-        for(int i = 0;i<256;i++)equiprovaveis -> frequencias[i]=1;
+        for(int i = 0;i<256;i++) equiprovaveis->freq_ref((uint16_t)i) = 1;
         equiprovaveis->total = 256;
     }
 
     bool existe_contexto(No* contexto,uint8_t simbolo){
-        return contexto->frequencias[simbolo] > 0;
+        return contexto->get_freq(simbolo) > 0;
     }
     No* busca_maior_contexto(deque<uint8_t>&janela){
         // Busca o maior contexto possivel para aquela janela de bytes e tenta codificar o simbolo
@@ -64,8 +64,8 @@ struct Ppm{
         return max(1u, static_cast<uint32_t>(contexto->distintos));
     }
     void insere_em_excluidos(No* contexto){
-        for(int i = 0;i<256;i++){
-            if(contexto->frequencias[i]>0)excluidos.insert(i);
+        for(const auto& [s,f] : contexto->frequencias){
+            if(f > 0 && s < 256) excluidos.insert((uint8_t)s);
         }
     }
     
@@ -94,7 +94,7 @@ struct Ppm{
                 // estava dando erro de sincronia, o decode não conseguia 
                 // ver a mesma distribuição
                 uint32_t freq_esc = calcula_escape(contexto);
-                contexto->frequencias[ESCAPE] = freq_esc;
+                contexto->freq_ref(ESCAPE) = freq_esc;
                 contexto->total += freq_esc;
 
                 if(existe_contexto(contexto, atual)) {
@@ -103,11 +103,11 @@ struct Ppm{
                     codificado = true;
 
                     // Remove a injeção temporária antes de terminar
-                    contexto->frequencias[ESCAPE] = 0;
+                    contexto->freq_ref(ESCAPE) = 0;
                     contexto->total -= freq_esc;
 
-                    if(equiprovaveis->frequencias[atual] > 0) {
-                        equiprovaveis->frequencias[atual]--;
+                    if(equiprovaveis->get_freq(atual) > 0) {
+                        equiprovaveis->freq_ref(atual)--;
                         equiprovaveis->total--;
                     }
                     break; // Termina o loop, encontramos o símbolo
@@ -117,7 +117,7 @@ struct Ppm{
                     aritmetico.encode_byte(ESCAPE, contexto, excluidos);
 
                     // Remove a injeção temporária
-                    contexto->frequencias[ESCAPE] = 0;
+                    contexto->freq_ref(ESCAPE) = 0;
                     contexto->total -= freq_esc;
 
                     insere_em_excluidos(contexto);
@@ -131,8 +131,8 @@ struct Ppm{
         if(codificado == false){
             // Se não codificou em nenhum contexto, codifica com equiprováveis
             if(aritmetico.encode_byte(atual,equiprovaveis,excluidos)){
-                if(equiprovaveis->frequencias[atual]>0) {
-                    equiprovaveis->frequencias[atual]--;
+                if(equiprovaveis->get_freq(atual) > 0) {
+                    equiprovaveis->freq_ref(atual)--;
                     equiprovaveis->total--;
                 }
             }
@@ -178,16 +178,16 @@ struct Ppm{
 
         while(contexto) {
             uint32_t freq_esc = calcula_escape(contexto);
-            contexto->frequencias[ESCAPE] = freq_esc;
+            contexto->freq_ref(ESCAPE) = freq_esc;
             contexto->total += freq_esc;
             uint32_t resultado = aritmetico.decode_byte(contexto, excluidos, arquivo_bits);
-            contexto->frequencias[ESCAPE] = 0;
+            contexto->freq_ref(ESCAPE) = 0;
             contexto->total -= freq_esc;
 
             if(resultado != ESCAPE) {
                 simbolo_decodificado = resultado;
-                if(equiprovaveis->frequencias[resultado] > 0){
-                    equiprovaveis->frequencias[resultado]--;
+                if(equiprovaveis->get_freq(resultado) > 0){
+                    equiprovaveis->freq_ref(resultado)--;
                     equiprovaveis->total--;
                 }
                 break;
@@ -198,8 +198,8 @@ struct Ppm{
 
         if(simbolo_decodificado == ESCAPE) {
             simbolo_decodificado = aritmetico.decode_byte(equiprovaveis, excluidos, arquivo_bits);
-            if(simbolo_decodificado != ESCAPE && equiprovaveis->frequencias[simbolo_decodificado] > 0) {
-                equiprovaveis->frequencias[simbolo_decodificado]--;
+            if(simbolo_decodificado != ESCAPE && equiprovaveis->get_freq(simbolo_decodificado) > 0) {
+                equiprovaveis->freq_ref(simbolo_decodificado)--;
                 equiprovaveis->total--;
             }
         }

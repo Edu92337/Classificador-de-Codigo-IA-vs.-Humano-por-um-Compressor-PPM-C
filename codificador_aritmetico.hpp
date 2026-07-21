@@ -51,12 +51,13 @@ struct Codificador_aritmetico{
     // =========================================================
 
     // Soma as frequências dos símbolos excluídos (exclusão de contexto PPM).
+    // Soma as frequências dos símbolos excluídos (exclusão de contexto PPM).
     uint32_t contagem_excluidos(No* contexto, const set<uint8_t>& excluidos)
     {
         uint32_t t = 0;
-        for(int i = 0; i < 256; i++){
-            if(excluidos.count(i))
-                t += contexto->frequencias[i];
+        for(const auto& [s,f] : contexto->frequencias){
+            if(s < 256 && excluidos.count((uint8_t)s))
+                t += f;
         }
         return t;
     }
@@ -72,7 +73,6 @@ struct Codificador_aritmetico{
         No* contexto,
         const set<uint8_t>& excluidos)
     {
-        auto& freq = contexto->frequencias;
         uint32_t total = contexto->total - contagem_excluidos(contexto, excluidos);
 
         if(total == 0)
@@ -82,16 +82,16 @@ struct Codificador_aritmetico{
         uint32_t freq_simbolo = 0;
         bool achou = false;
 
-        for(int i = 0; i < 257; i++){
-            if(i != (int)ESCAPE && excluidos.count(i)) continue;
-            if(freq[i] == 0) continue;
+        for(const auto& [s,f] : contexto->frequencias){
+            if(s != ESCAPE && excluidos.count((uint8_t)s)) continue;
+            if(f == 0) continue;
 
-            if((uint32_t)i == simbolo){
-                freq_simbolo = freq[i];
+            if((uint32_t)s == simbolo){
+                freq_simbolo = f;
                 achou = true;
                 break;
             }
-            cumulativa += freq[i];
+            cumulativa += f;
         }
 
         if(!achou) return false;
@@ -292,13 +292,8 @@ struct Codificador_aritmetico{
     // Retorna ESCAPE=256 se o contexto estiver vazio (total==0 após excluídos)
     // ou se o intervalo decodificado corresponder ao ESCAPE injetado pelo PPM.
     uint32_t decode_byte(No* contexto, const set<uint8_t>& excluidos, ifstream& arquivo_bits){
-        auto& freq = contexto->frequencias;
-        
-        // Calcula o total real considerando as exclusões dinâmicas
         uint32_t total = contexto->total - contagem_excluidos(contexto, excluidos);
 
-        // Se o total for de fato 0 e não houver frequência de ESCAPE injetada,
-        // significa que não há dados válidos matematicamente.
         if(total == 0) return ESCAPE;
 
         uint64_t range = (uint64_t)high - (uint64_t)low + 1ULL;
@@ -309,25 +304,23 @@ struct Codificador_aritmetico{
         uint32_t simbolo_encontrado = 0;
         bool encontrou = false;
 
-        for(int i = 0; i < 257; i++) {
-            if(i != (int)ESCAPE && excluidos.count((uint8_t)i)) continue;
-            if(freq[i] == 0) continue;
+        for(const auto& [s,f] : contexto->frequencias) {
+            if(s != ESCAPE && excluidos.count((uint8_t)s)) continue;
+            if(f == 0) continue;
 
-            if(ponto >= cumulativa && ponto < cumulativa + freq[i]) {
-                simbolo_encontrado = (uint32_t)i;
-                freq_simbolo = freq[i];
+            if(ponto >= cumulativa && ponto < cumulativa + f) {
+                simbolo_encontrado = (uint32_t)s;
+                freq_simbolo = f;
                 encontrou = true;
                 break;
             }
-            cumulativa += freq[i];
+            cumulativa += f;
         }
 
         if(!encontrou) {
-            // Fallback de segurança se falhar a precisão matemática
             return ESCAPE;
         }
 
-        // Renormalização obrigatória do decodificador (Deve ser executada SEMPRE que ler um símbolo/escape)
         uint64_t next_low = (uint64_t)low + (range * cumulativa) / total;
         uint64_t next_high = (uint64_t)low + (range * (cumulativa + freq_simbolo)) / total - 1ULL;
         low = (uint32_t)next_low;
