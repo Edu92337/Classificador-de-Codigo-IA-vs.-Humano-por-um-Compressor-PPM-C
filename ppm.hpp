@@ -30,12 +30,14 @@ struct Ppm{
     uint64_t total_simbolos_processados;
     double l0 = 0,lf = 0;
     long long bytes_na_janela = 0;
+    bool treino;
     // ---- Contadores e log de eventos de adaptação (poda/reset) ----
-    Ppm(int k){
+    Ppm(int k,bool treinando){
         Kmax = k;
         equiprovaveis = new No();
         inicia_equiprovaveis();
         total_simbolos_processados = 0;
+        treino = treinando;
     }
 
     ~Ppm(){
@@ -146,8 +148,13 @@ struct Ppm{
         // tentado (contexto_inicial), independente de qual nível efetivamente
         // codificou o símbolo. Isso garante que todos os contextos no caminho
         // -1,0,1,...,Kmax aprendam sobre "atual", inclusive os que deram ESCAPE.
-        arvore.atualiza_frequencia(contexto_inicial,atual);
-        atualiza_contexto(atual);
+
+        if(treino){   // só atualiza os contextos/frequências durante o treino
+            arvore.atualiza_frequencia(contexto_inicial, atual);
+            atualiza_contexto(atual);
+        }    
+    
+        
         // limpar excluidos para processar um byte novo
         excluidos.clear();
 
@@ -206,9 +213,13 @@ struct Ppm{
 
         uint64_t bits_depois = aritmetico.bits_consumidos_total;
         bytes_na_janela++;
-        arvore.atualiza_frequencia(contexto_inicial, (uint8_t)simbolo_decodificado);
+        if(treino){   // só atualiza os contextos/frequências durante o treino
+            arvore.atualiza_frequencia(contexto_inicial, (uint8_t)simbolo_decodificado);
+            atualiza_contexto((uint8_t)simbolo_decodificado);
+        }
+            
         total_simbolos_processados++;
-        atualiza_contexto((uint8_t)simbolo_decodificado);
+        
         excluidos.clear();
         return (uint8_t)simbolo_decodificado;
     }
