@@ -11,9 +11,21 @@
 using namespace std;
 namespace fs = filesystem;
 
+vector<string>arquivos_ia_treino{
+    "/home/eduardo/Faculdade/Introdução a Teoria da Informação/Projeto-2/dataset/ai_treino/c",
+    "/home/eduardo/Faculdade/Introdução a Teoria da Informação/Projeto-2/dataset/ai_treino/cpp",
+    "/home/eduardo/Faculdade/Introdução a Teoria da Informação/Projeto-2/dataset/ai_treino/java",
+    "/home/eduardo/Faculdade/Introdução a Teoria da Informação/Projeto-2/dataset/ai_treino/py"
+};
+vector<string>arquivos_humano_treino{
+    "/home/eduardo/Faculdade/Introdução a Teoria da Informação/Projeto-2/dataset/human_treino/c",
+    "/home/eduardo/Faculdade/Introdução a Teoria da Informação/Projeto-2/dataset/human_treino/cpp",
+    "/home/eduardo/Faculdade/Introdução a Teoria da Informação/Projeto-2/dataset/human_treino/java",
+    "/home/eduardo/Faculdade/Introdução a Teoria da Informação/Projeto-2/dataset/human_treino/py"  
+};
 
-
-void codifica_arquivo(ifstream& arquivo, Ppm& modelo, bool metricas){
+void codifica_arquivo(ifstream& arquivo, Ppm& modelo){
+    modelo.janela_atual.clear();
     char byte;
     while(arquivo.get(byte)){
         modelo.processa_simbolo((uint8_t)byte);
@@ -24,15 +36,28 @@ double comprimento_do_arquivo(ifstream& arquivo, Ppm& modelo){
     uint64_t bits_antes = modelo.aritmetico.bits_emitidos_total;
     uint64_t simbolos_antes = modelo.total_simbolos_processados;
 
-    codifica_arquivo(arquivo, modelo, false);
+    codifica_arquivo(arquivo, modelo);
     uint64_t n = modelo.total_simbolos_processados - simbolos_antes;
     if(n == 0) return 0.0;
     uint64_t bits_depois = modelo.aritmetico.bits_emitidos_total;
     return (double)(bits_depois - bits_antes) / (double)n;
 }
 
-void treina_modelo(string path, Ppm& modelo){
+void treina_modelo(Ppm& modelo,bool ia, string tipo){
     error_code ec;
+    string path;
+    if(ia){
+        if(tipo == "c") path = arquivos_ia_treino[0];
+        else if(tipo == "cpp") path = arquivos_ia_treino[1];
+        else if(tipo == "java") path = arquivos_ia_treino[2];
+        else if(tipo == "py") path = arquivos_ia_treino[3];
+    }else{
+        if(tipo == "c") path = arquivos_humano_treino[0];
+        else if(tipo == "cpp") path = arquivos_humano_treino[1];
+        else if(tipo == "java") path = arquivos_humano_treino[2];
+        else if(tipo == "py") path = arquivos_humano_treino[3];
+    }
+    
     for(auto& entrada : fs::recursive_directory_iterator(path, fs::directory_options::skip_permission_denied, ec)){
         if(ec){ cerr << "Erro: " << ec.message() << endl; return; }
 
@@ -42,7 +67,7 @@ void treina_modelo(string path, Ppm& modelo){
                 cerr << "Erro ao abrir: " << entrada.path() << endl;
                 return;
             }
-            codifica_arquivo(arquivo, modelo, false);
+            codifica_arquivo(arquivo, modelo);
         }
     }
 }
@@ -67,13 +92,14 @@ string classificador(Ppm& modelo_ia, Ppm& modelo_humano, string path_arquivo,boo
     else return "Humano";
 }
 
-void teste_geral(Ppm& modelo_ia,Ppm&modelo_humano,string& path_ia, string& path_humano){
+void teste_geral(Ppm& modelo_ia,Ppm& modelo_humano,string& path_ia, string& path_humano){
     string path;
-    long long corretos = 0;
-    long long total = 0;
+    long long corretos_humano = 0, total_humano = 0;
+    long long corretos_ia = 0, total_ia = 0;
     // TESTE DOS CÓDIGOS HUMANOS
     path = path_humano;
     error_code ec;
+    //Percorre todos os arquivos de teste_humano
     for(auto& entrada : fs::recursive_directory_iterator(path, fs::directory_options::skip_permission_denied, ec)){
         if(ec){ cerr << "Erro: " << ec.message() << endl; return; }
 
@@ -84,8 +110,8 @@ void teste_geral(Ppm& modelo_ia,Ppm&modelo_humano,string& path_ia, string& path_
                 return;
             }
             string classe = classificador(modelo_ia,modelo_humano,entrada.path(),false);
-            if(classe == "Humano")corretos++;
-            total++;
+            if(classe == "Humano")corretos_humano++;
+            total_humano++;
         }
     }
     // TESTE DOS CÓDIGOS GERADOS POR IA
@@ -100,15 +126,19 @@ void teste_geral(Ppm& modelo_ia,Ppm&modelo_humano,string& path_ia, string& path_
                 return;
             }
             string classe = classificador(modelo_ia,modelo_humano,entrada.path(),false);
-            if(classe == "IA")corretos++;
-            total++;
+            if(classe == "IA")corretos_ia++;
+            total_ia++;
         }
     }
+    double acuracia_humano = 100.0 * corretos_humano / total_humano;
+    double acuracia_ia = 100.0 * corretos_ia / total_ia;
+    double acuracia_balanceada = (acuracia_humano + acuracia_ia) / 2.0; // média não ponderada
+    double acuracia_agregada = 100.0 * (corretos_humano + corretos_ia) / (total_humano + total_ia);
 
-    double acuracia = 100.0 * corretos / total;
-
-    cout << "Corretos: " << corretos << "/" << total << endl;
-    cout << "Porcentagem de Acerto: " << acuracia << "%" << endl;
+    cout << "Humano:    " << corretos_humano << "/" << total_humano << " (" << acuracia_humano << "%)" << endl;
+    cout << "IA:        " << corretos_ia << "/" << total_ia << " (" << acuracia_ia << "%)" << endl;
+    cout << "Balanceada: " << acuracia_balanceada << "%" << endl;
+    cout << "Agregada:   " << acuracia_agregada << "% (cuidado: pesa mais a classe com mais amostras)" << endl;
 }
 
 void teste_geral_tipo(Ppm& modelo_ia,Ppm& modelo_humano, string tipo){
