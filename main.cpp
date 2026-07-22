@@ -46,7 +46,7 @@ void treina_modelo(string path, Ppm& modelo){
     }
 }
 
-string classificador(Ppm& modelo_ia, Ppm& modelo_humano, string path_arquivo){
+string classificador(Ppm& modelo_ia, Ppm& modelo_humano, string path_arquivo,bool teste_unitario){
     ifstream arquivo(path_arquivo, ios::binary);
     if(!arquivo.is_open()){
         cerr << "Erro ao abrir: " << path_arquivo << endl;
@@ -57,10 +57,11 @@ string classificador(Ppm& modelo_ia, Ppm& modelo_humano, string path_arquivo){
     arquivo.clear();
     arquivo.seekg(0);
     double comprimento_humano = comprimento_do_arquivo(arquivo, modelo_humano);
-
-    /*cout << "Bits IA: " << comprimento_ia << endl;
-    cout << "Bits Humano: " << comprimento_humano << endl;
-    */
+    if(teste_unitario){
+        cout << "Arquivo: " << path_arquivo << endl;
+        cout << "Comprimento IA: " << comprimento_ia << endl;
+        cout << "Comprimento Humano: " << comprimento_humano << endl;
+    }
     if(comprimento_ia < comprimento_humano) return "IA";
     else return "Humano";
 }
@@ -84,7 +85,7 @@ void teste_geral(Ppm& modelo_ia,Ppm&modelo_humano){
                 cerr << "Erro ao abrir: " << entrada.path() << endl;
                 return;
             }
-            string classe = classificador(modelo_ia,modelo_humano,entrada.path());
+            string classe = classificador(modelo_ia,modelo_humano,entrada.path(),false);
             if(classe == "Humano")corretos++;
             total++;
         }
@@ -100,7 +101,7 @@ void teste_geral(Ppm& modelo_ia,Ppm&modelo_humano){
                 cerr << "Erro ao abrir: " << entrada.path() << endl;
                 return;
             }
-            string classe = classificador(modelo_ia,modelo_humano,entrada.path());
+            string classe = classificador(modelo_ia,modelo_humano,entrada.path(),false);
             if(classe == "IA")corretos++;
             total++;
         }
@@ -113,7 +114,7 @@ void teste_geral(Ppm& modelo_ia,Ppm&modelo_humano){
 }
 
 void teste_arquivo(Ppm& modelo_ia,Ppm&modelo_humano,string& path_teste){
-    string classe = classificador(modelo_ia,modelo_humano,path_teste);
+    string classe = classificador(modelo_ia,modelo_humano,path_teste,true);
     cout << "Arquivo: " << path_teste << " -> Classe: " << classe << endl;
 }
 
