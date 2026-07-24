@@ -44,6 +44,8 @@ void codifica_arquivo(ifstream& arquivo, Ppm& modelo){
     while(arquivo.get(byte)){
         modelo.processa_simbolo((uint8_t)byte);
     }
+    modelo.aritmetico.finaliza_codificacao();
+    
 }
 
 double comprimento_do_arquivo(ifstream& arquivo, Ppm& modelo){
