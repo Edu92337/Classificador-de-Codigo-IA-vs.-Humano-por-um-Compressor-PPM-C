@@ -156,6 +156,23 @@ struct Codificador_aritmetico{
             escreve_bit_com_pendentes(1);
     }
 
+    void reinicia() {
+        low = 0;
+        high = (uint32_t)TOP;
+
+        bits_buffer.clear();
+        bits_pendentes = 0;
+
+        bits_emitidos_total = 0;
+
+        bits_lidos = 0;
+        bits_consumidos_total = 0;
+
+        value = 0;
+        byte_leitura = 0;
+        bits_restantes_byte = 0;
+    }
+
     // Salva o stream de bits no arquivo com cabeçalho:
     //   [uint64_t: qtd arquivos]
     //   para cada arquivo: [uint16_t: len_nome][nome][uint64_t: tamanho_bytes]
