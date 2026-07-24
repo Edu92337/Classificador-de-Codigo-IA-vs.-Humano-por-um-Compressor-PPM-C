@@ -24,6 +24,20 @@ vector<string>arquivos_humano_treino{
     "/home/eduardo/Faculdade/Introdução a Teoria da Informação/Projeto-2/dataset/human_treino/py"  
 };
 
+vector<string> arquivos_ia = {
+    "/home/eduardo/Faculdade/Introdução a Teoria da Informação/Projeto-2/dataset/ai_teste/c",
+    "/home/eduardo/Faculdade/Introdução a Teoria da Informação/Projeto-2/dataset/ai_teste/cpp",
+    "/home/eduardo/Faculdade/Introdução a Teoria da Informação/Projeto-2/dataset/ai_teste/java",
+    "/home/eduardo/Faculdade/Introdução a Teoria da Informação/Projeto-2/dataset/ai_teste/py"
+};
+
+vector<string> arquivos_humano{
+    "/home/eduardo/Faculdade/Introdução a Teoria da Informação/Projeto-2/dataset/human_teste/c",
+    "/home/eduardo/Faculdade/Introdução a Teoria da Informação/Projeto-2/dataset/human_teste/cpp",
+    "/home/eduardo/Faculdade/Introdução a Teoria da Informação/Projeto-2/dataset/human_teste/java",
+    "/home/eduardo/Faculdade/Introdução a Teoria da Informação/Projeto-2/dataset/human_teste/py"
+};
+
 void codifica_arquivo(ifstream& arquivo, Ppm& modelo){
     modelo.janela_atual.clear();
     char byte;
@@ -87,6 +101,9 @@ string classificador(Ppm& modelo_ia, Ppm& modelo_humano, string path_arquivo,boo
         cout << "Arquivo: " << path_arquivo << endl;
         cout << "Comprimento IA: " << comprimento_ia << endl;
         cout << "Comprimento Humano: " << comprimento_humano << endl;
+        cout <<"Margem de erro percentual : "
+        << abs(comprimento_ia - comprimento_humano) / ((comprimento_ia + comprimento_humano) ) * 100.0
+         << "%" << endl;
     }
     if(comprimento_ia < comprimento_humano) return "IA";
     else return "Humano";
@@ -132,29 +149,15 @@ void teste_geral(Ppm& modelo_ia,Ppm& modelo_humano,string& path_ia, string& path
     }
     double acuracia_humano = 100.0 * corretos_humano / total_humano;
     double acuracia_ia = 100.0 * corretos_ia / total_ia;
-    double acuracia_balanceada = (acuracia_humano + acuracia_ia) / 2.0; // média não ponderada
-    double acuracia_agregada = 100.0 * (corretos_humano + corretos_ia) / (total_humano + total_ia);
+    double acuracia_total = 100.0 * (corretos_humano + corretos_ia) / (total_humano + total_ia);
 
     cout << "Humano:    " << corretos_humano << "/" << total_humano << " (" << acuracia_humano << "%)" << endl;
     cout << "IA:        " << corretos_ia << "/" << total_ia << " (" << acuracia_ia << "%)" << endl;
-    cout << "Balanceada: " << acuracia_balanceada << "%" << endl;
-    cout << "Agregada:   " << acuracia_agregada << "% (cuidado: pesa mais a classe com mais amostras)" << endl;
+    cout << "Agregada:   " << acuracia_total << "% " << endl;
 }
 
 void teste_geral_tipo(Ppm& modelo_ia,Ppm& modelo_humano, string tipo){
 
-    vector<string> arquivos_ia = {
-    "/home/eduardo/Faculdade/Introdução a Teoria da Informação/Projeto-2/dataset/ai_teste/c",
-    "/home/eduardo/Faculdade/Introdução a Teoria da Informação/Projeto-2/dataset/ai_teste/cpp",
-    "/home/eduardo/Faculdade/Introdução a Teoria da Informação/Projeto-2/dataset/ai_teste/java",
-    "/home/eduardo/Faculdade/Introdução a Teoria da Informação/Projeto-2/dataset/ai_teste/py"};
-
-    vector<string> arquivos_humano{
-        "/home/eduardo/Faculdade/Introdução a Teoria da Informação/Projeto-2/dataset/human_teste/c",
-        "/home/eduardo/Faculdade/Introdução a Teoria da Informação/Projeto-2/dataset/human_teste/cpp",
-        "/home/eduardo/Faculdade/Introdução a Teoria da Informação/Projeto-2/dataset/human_teste/java",
-        "/home/eduardo/Faculdade/Introdução a Teoria da Informação/Projeto-2/dataset/human_teste/py"
-    };
     if(tipo == "c"){
         teste_geral(modelo_ia,modelo_humano,arquivos_ia[0],arquivos_humano[0]);
     }else if(tipo == "cpp"){
